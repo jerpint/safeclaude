@@ -1,0 +1,143 @@
+#!/bin/bash
+# safeclaude — drop-in replacement for `claude` that runs inside a container
+#
+# Usage:
+#   safeclaude                          # start claude in current repo/worktree
+#   safeclaude "fix the auth bug"       # start with a prompt
+#   safeclaude --resume                 # resume last conversation
+#   safeclaude -p "do the thing"        # pass any claude flags
+#
+# Mount scoping (in priority order):
+#   1. SAFECLAUDE_MOUNT=<path>          # explicit mount root
+#   2. .safeclaude-mount file           # in any parent dir, contains mount path
+#   3. Auto-detect from git worktrees   # finds common parent of all worktrees
+#   4. Git repo root                    # fallback: just the current repo
+#
+# Auth: set CLAUDE_CODE_OAUTH_TOKEN in ~/safeclaude/.env, or auth interactively on first run.
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+IMAGE="${SAFECLAUDE_IMAGE:-safeclaude}"
+CONTAINER_PREFIX="safeclaude"
+
+# --- Load .env if present ---
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  set -a
+  source "$SCRIPT_DIR/.env"
+  set +a
+fi
+
+if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+  echo "note: CLAUDE_CODE_OAUTH_TOKEN not set — Claude will prompt you to authenticate"
+fi
+
+# --- Detect git context ---
+GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -z "$GIT_ROOT" ]; then
+  echo "error: not inside a git repository"
+  exit 1
+fi
+
+# --- Resolve mount root (priority: env > marker file > git worktrees > repo root) ---
+MOUNT_ROOT=""
+
+# 1. Explicit env var
+if [ -n "$SAFECLAUDE_MOUNT" ]; then
+  MOUNT_ROOT="$SAFECLAUDE_MOUNT"
+
+# 2. Walk up looking for .safeclaude-mount marker file
+else
+  check_dir="$(pwd)"
+  while [ "$check_dir" != "/" ]; do
+    if [ -f "$check_dir/.safeclaude-mount" ]; then
+      MOUNT_ROOT="$(cat "$check_dir/.safeclaude-mount")"
+      # Expand ~ if present
+      MOUNT_ROOT="${MOUNT_ROOT/#\~/$HOME}"
+      break
+    fi
+    check_dir="$(dirname "$check_dir")"
+  done
+fi
+
+# 3. Auto-detect from git worktrees
+if [ -z "$MOUNT_ROOT" ]; then
+  GIT_COMMON_DIR="$(cd "$GIT_ROOT" && git rev-parse --git-common-dir 2>/dev/null)"
+  if [ "$GIT_COMMON_DIR" = ".git" ]; then
+    MAIN_REPO_ROOT="$GIT_ROOT"
+  else
+    MAIN_REPO_ROOT="$(cd "$GIT_ROOT" && cd "$GIT_COMMON_DIR/.." && pwd)"
+  fi
+
+  MOUNT_ROOT="$MAIN_REPO_ROOT"
+  while IFS= read -r line; do
+    wt_path="$(echo "$line" | awk '{print $1}')"
+    # Skip the main repo itself — only widen for actual worktrees
+    [ "$wt_path" = "$MAIN_REPO_ROOT" ] && continue
+    wt_parent="$(dirname "$wt_path")"
+    mr_parent="$(dirname "$MOUNT_ROOT")"
+    if [ "$wt_parent" = "$mr_parent" ]; then
+      MOUNT_ROOT="$mr_parent"
+    fi
+  done < <(cd "$MAIN_REPO_ROOT" && git worktree list 2>/dev/null)
+fi
+
+# Validate
+if [ ! -d "$MOUNT_ROOT" ]; then
+  echo "error: mount root does not exist: $MOUNT_ROOT"
+  exit 1
+fi
+
+# --- Map current host path to container path ---
+HOST_CWD="$(pwd)"
+CONTAINER_MOUNT="/workspace"
+if [[ "$HOST_CWD" == "$MOUNT_ROOT"* ]]; then
+  RELATIVE="${HOST_CWD#$MOUNT_ROOT}"
+  CONTAINER_CWD="${CONTAINER_MOUNT}${RELATIVE}"
+else
+  CONTAINER_CWD="$CONTAINER_MOUNT"
+fi
+
+# --- Build image if needed ---
+if ! docker image inspect "$IMAGE" &>/dev/null; then
+  echo "Building safeclaude image..."
+  docker build -t "$IMAGE" "$SCRIPT_DIR"
+fi
+
+# --- Container name ---
+MOUNT_BASENAME="$(basename "$MOUNT_ROOT")"
+CONTAINER_NAME="${CONTAINER_PREFIX}-${MOUNT_BASENAME}"
+
+# --- Mounts ---
+MOUNTS=(
+  -v "$MOUNT_ROOT:$CONTAINER_MOUNT"
+  -v "$HOME/.config/gh:/home/node/.config/gh"
+)
+
+if [ -d "$HOME/.claude" ]; then
+  MOUNTS+=(-v "$HOME/.claude:/home/node/.claude-host:ro")
+fi
+
+# Persist credentials across runs — mount .claude dir so writes go to host
+PERSIST_DIR="$HOME/.safeclaude"
+mkdir -p "$PERSIST_DIR"
+MOUNTS+=(-v "$PERSIST_DIR:/home/node/.claude")
+
+# --- Claude args ---
+CLAUDE_ARGS=("--dangerously-skip-permissions")
+if [ $# -gt 0 ]; then
+  CLAUDE_ARGS+=("$@")
+fi
+
+# --- Clean up previous container ---
+docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+
+# --- Run ---
+exec docker run -it \
+  --name "$CONTAINER_NAME" \
+  "${MOUNTS[@]}" \
+  $SAFECLAUDE_EXTRA_MOUNTS \
+  -e CLAUDE_CODE_OAUTH_TOKEN="${CLAUDE_CODE_OAUTH_TOKEN}" \
+  -w "$CONTAINER_CWD" \
+  "$IMAGE" \
+  claude "${CLAUDE_ARGS[@]}"
