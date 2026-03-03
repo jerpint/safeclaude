@@ -39,8 +39,6 @@ with open(p, 'w') as f:
 }
 
 # --- Git ---
-git config --global user.name "onix-claude"
-git config --global user.email "claude@onix.ai"
 git config --global --add safe.directory '*'
 
 # --- Alias ---

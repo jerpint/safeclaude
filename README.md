@@ -48,12 +48,12 @@ Network is unrestricted (GitHub API, Linear MCP, Claude API, etc).
 
 1. **`SAFECLAUDE_MOUNT` env var** — explicit mount root
    ```bash
-   SAFECLAUDE_MOUNT=~/.worktui/onix-ai safeclaude
+   SAFECLAUDE_MOUNT=~/my-project safeclaude
    ```
 
 2. **`.safeclaude-mount` marker file** — drop in any parent directory, contents = mount path
    ```bash
-   echo ~/.worktui/onix-ai > ~/.worktui/onix-ai/.safeclaude-mount
+   echo ~/my-project > ~/my-project/.safeclaude-mount
    # Now any `safeclaude` run under this dir uses that mount root
    ```
 
