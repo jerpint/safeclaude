@@ -26,6 +26,7 @@ safeclaude                          # start claude in current repo
 safeclaude "fix the auth bug"       # start with a prompt
 safeclaude --resume                 # resume last conversation
 safeclaude -p "do the thing"        # pass any claude flags
+safeclaude --github                  # enable GitHub CLI access
 ```
 
 ## What it has access to
@@ -33,7 +34,7 @@ safeclaude -p "do the thing"        # pass any claude flags
 | Mount | Container path | Mode | Purpose |
 |---|---|---|---|
 | Git repo / worktree parent | `/workspace` | read/write | Your code |
-| `~/.config/gh` | `/home/node/.config/gh` | read/write | GitHub CLI auth |
+| `~/.config/gh` | `/home/node/.config/gh` | read/write | GitHub CLI auth (opt-in: `SAFECLAUDE_GH=1`) |
 | `~/.claude` | `/home/node/.claude-host` | read-only | Host Claude settings reference |
 | `~/.safeclaude/` | `/home/node/.claude` | read/write | Credentials + config persistence |
 
@@ -56,9 +57,7 @@ Network is unrestricted (GitHub API, Linear MCP, Claude API, etc).
    # Now any `safeclaude` run under this dir uses that mount root
    ```
 
-3. **Git worktree auto-detect** — finds the common parent of all worktrees for the current repo
-
-4. **Git repo root** — fallback, mounts just the current repo
+3. **Git repo / worktree root** — mounts just the current repo or worktree
 
 ## Auth
 
@@ -84,6 +83,7 @@ Then just `safeclaude` from anywhere.
 | `CLAUDE_CODE_OAUTH_TOKEN` | Skip interactive auth |
 | `SAFECLAUDE_MOUNT` | Override mount root |
 | `SAFECLAUDE_IMAGE` | Override Docker image name (default: `safeclaude`) |
+| `SAFECLAUDE_GH` | Set to `1` to mount GitHub CLI auth (off by default) |
 | `SAFECLAUDE_EXTRA_MOUNTS` | Additional `-v` flags |
 
 ## MCP servers

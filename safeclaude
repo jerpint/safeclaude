@@ -6,12 +6,12 @@
 #   safeclaude "fix the auth bug"       # start with a prompt
 #   safeclaude --resume                 # resume last conversation
 #   safeclaude -p "do the thing"        # pass any claude flags
+#   safeclaude --github                  # enable GitHub CLI access
 #
 # Mount scoping (in priority order):
 #   1. SAFECLAUDE_MOUNT=<path>          # explicit mount root
 #   2. .safeclaude-mount file           # in any parent dir, contains mount path
-#   3. Auto-detect from git worktrees   # finds common parent of all worktrees
-#   4. Git repo root                    # fallback: just the current repo
+#   3. Git repo / worktree root          # just the current repo or worktree
 #
 # Auth: set CLAUDE_CODE_OAUTH_TOKEN in ~/safeclaude/.env, or auth interactively on first run.
 
@@ -60,26 +60,9 @@ else
   done
 fi
 
-# 3. Auto-detect from git worktrees
+# 3. Current repo/worktree root
 if [ -z "$MOUNT_ROOT" ]; then
-  GIT_COMMON_DIR="$(cd "$GIT_ROOT" && git rev-parse --git-common-dir 2>/dev/null)"
-  if [ "$GIT_COMMON_DIR" = ".git" ]; then
-    MAIN_REPO_ROOT="$GIT_ROOT"
-  else
-    MAIN_REPO_ROOT="$(cd "$GIT_ROOT" && cd "$GIT_COMMON_DIR/.." && pwd)"
-  fi
-
-  MOUNT_ROOT="$MAIN_REPO_ROOT"
-  while IFS= read -r line; do
-    wt_path="$(echo "$line" | awk '{print $1}')"
-    # Skip the main repo itself — only widen for actual worktrees
-    [ "$wt_path" = "$MAIN_REPO_ROOT" ] && continue
-    wt_parent="$(dirname "$wt_path")"
-    mr_parent="$(dirname "$MOUNT_ROOT")"
-    if [ "$wt_parent" = "$mr_parent" ]; then
-      MOUNT_ROOT="$mr_parent"
-    fi
-  done < <(cd "$MAIN_REPO_ROOT" && git worktree list 2>/dev/null)
+  MOUNT_ROOT="$GIT_ROOT"
 fi
 
 # Validate
@@ -111,8 +94,15 @@ CONTAINER_NAME="${CONTAINER_PREFIX}-${MOUNT_BASENAME}"
 # --- Mounts ---
 MOUNTS=(
   -v "$MOUNT_ROOT:$CONTAINER_MOUNT"
-  -v "$HOME/.config/gh:/home/node/.config/gh"
 )
+
+# If in a worktree, the .git file points to the main repo's .git dir via absolute path.
+# Mount it at the same path inside the container so git can resolve it.
+GIT_COMMON_DIR="$(cd "$GIT_ROOT" && git rev-parse --git-common-dir 2>/dev/null)"
+if [ "$GIT_COMMON_DIR" != ".git" ]; then
+  MAIN_GIT_DIR="$(cd "$GIT_ROOT" && cd "$GIT_COMMON_DIR" && pwd)"
+  MOUNTS+=(-v "$MAIN_GIT_DIR:$MAIN_GIT_DIR:ro")
+fi
 
 if [ -d "$HOME/.claude" ]; then
   MOUNTS+=(-v "$HOME/.claude:/home/node/.claude-host:ro")
@@ -123,10 +113,24 @@ PERSIST_DIR="$HOME/.safeclaude"
 mkdir -p "$PERSIST_DIR"
 MOUNTS+=(-v "$PERSIST_DIR:/home/node/.claude")
 
+# --- Parse safeclaude-specific flags ---
+CLAUDE_PASSTHROUGH=()
+for arg in "$@"; do
+  case "$arg" in
+    --github) SAFECLAUDE_GH=1 ;;
+    *) CLAUDE_PASSTHROUGH+=("$arg") ;;
+  esac
+done
+
+# GitHub CLI access (opt-in via --github or SAFECLAUDE_GH=1)
+if [ "${SAFECLAUDE_GH:-0}" = "1" ] && [ -d "$HOME/.config/gh" ]; then
+  MOUNTS+=(-v "$HOME/.config/gh:/home/node/.config/gh")
+fi
+
 # --- Claude args ---
 CLAUDE_ARGS=("--dangerously-skip-permissions")
-if [ $# -gt 0 ]; then
-  CLAUDE_ARGS+=("$@")
+if [ ${#CLAUDE_PASSTHROUGH[@]} -gt 0 ]; then
+  CLAUDE_ARGS+=("${CLAUDE_PASSTHROUGH[@]}")
 fi
 
 # --- Clean up previous container ---
