@@ -1,5 +1,7 @@
 # safeclaude
 
+> **WARNING: This project is EXPERIMENTAL. Use at your own risk.**
+
 Drop-in replacement for `claude` that runs inside a Docker container with `--dangerously-skip-permissions`. Fully autonomous Claude, scoped to your git repo.
 
 ## Why
