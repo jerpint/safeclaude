@@ -8,6 +8,8 @@
 #   safeclaude -p "do the thing"        # pass any claude flags
 #   safeclaude --github                  # enable GitHub CLI access
 #   safeclaude --persist-history          # mount ~/.claude for session history
+#   safeclaude --shell                    # drop into a bash shell in the container
+#   safeclaude --rebuild                  # force rebuild the Docker image
 #
 # Mount scoping (in priority order):
 #   1. SAFECLAUDE_MOUNT=<path>          # explicit mount root
@@ -28,6 +30,18 @@ if [ -f "$SCRIPT_DIR/.env" ]; then
   source "$SCRIPT_DIR/.env"
   set +a
 fi
+
+# --- Parse safeclaude-specific flags (early, before they're needed) ---
+CLAUDE_PASSTHROUGH=()
+for arg in "$@"; do
+  case "$arg" in
+    --github) SAFECLAUDE_GH=1 ;;
+    --persist-history) SAFECLAUDE_PERSIST_HISTORY=1 ;;
+    --shell) SAFECLAUDE_SHELL=1 ;;
+    --rebuild) SAFECLAUDE_REBUILD=1 ;;
+    *) CLAUDE_PASSTHROUGH+=("$arg") ;;
+  esac
+done
 
 if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
   echo "note: CLAUDE_CODE_OAUTH_TOKEN not set — Claude will prompt you to authenticate"
@@ -83,8 +97,11 @@ HOST_CWD="$(pwd)"
 CONTAINER_MOUNT="$MOUNT_ROOT"
 CONTAINER_CWD="$HOST_CWD"
 
-# --- Build image if needed ---
-if ! docker image inspect "$IMAGE" &>/dev/null; then
+# --- Build image (force rebuild or if missing) ---
+if [ "${SAFECLAUDE_REBUILD:-0}" = "1" ]; then
+  echo "Rebuilding safeclaude image..."
+  docker build --no-cache -t "$IMAGE" "$SCRIPT_DIR"
+elif ! docker image inspect "$IMAGE" &>/dev/null; then
   echo "Building safeclaude image..."
   docker build -t "$IMAGE" "$SCRIPT_DIR"
 fi
@@ -121,16 +138,6 @@ else
   MOUNTS+=(-v "$PERSIST_DIR:/home/node/.claude")
 fi
 
-# --- Parse safeclaude-specific flags ---
-CLAUDE_PASSTHROUGH=()
-for arg in "$@"; do
-  case "$arg" in
-    --github) SAFECLAUDE_GH=1 ;;
-    --persist-history) SAFECLAUDE_PERSIST_HISTORY=1 ;;
-    *) CLAUDE_PASSTHROUGH+=("$arg") ;;
-  esac
-done
-
 # GitHub CLI access (opt-in via --github or SAFECLAUDE_GH=1)
 if [ "${SAFECLAUDE_GH:-0}" = "1" ] && [ -d "$HOME/.config/gh" ]; then
   MOUNTS+=(-v "$HOME/.config/gh:/home/node/.config/gh")
@@ -145,6 +152,13 @@ fi
 # --- Clean up previous container ---
 docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
 
+# --- Entrypoint command ---
+if [ "${SAFECLAUDE_SHELL:-0}" = "1" ]; then
+  CONTAINER_CMD=(bash)
+else
+  CONTAINER_CMD=(claude "${CLAUDE_ARGS[@]}")
+fi
+
 # --- Run ---
 exec docker run -it \
   --name "$CONTAINER_NAME" \
@@ -155,4 +169,4 @@ exec docker run -it \
   ${GIT_USER_EMAIL:+-e GIT_USER_EMAIL="$GIT_USER_EMAIL"} \
   -w "$CONTAINER_CWD" \
   "$IMAGE" \
-  claude "${CLAUDE_ARGS[@]}"
+  "${CONTAINER_CMD[@]}"

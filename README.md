@@ -30,6 +30,8 @@ safeclaude --resume                 # resume last conversation
 safeclaude -p "do the thing"        # pass any claude flags
 safeclaude --github                  # enable GitHub CLI access
 safeclaude --persist-history          # mount ~/.claude for session history
+safeclaude --shell                    # drop into a bash shell in the container
+safeclaude --rebuild                  # force rebuild the Docker image
 ```
 
 ## What it has access to
