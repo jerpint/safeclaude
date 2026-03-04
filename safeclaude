@@ -1,5 +1,5 @@
 #!/bin/bash
-# safeclaude — drop-in replacement for `claude` that runs inside a container
+# safeclaude -drop-in replacement for `claude` that runs inside a container
 #
 # Usage:
 #   safeclaude                          # start claude in current repo/worktree
@@ -8,6 +8,7 @@
 #   safeclaude -p "do the thing"        # pass any claude flags
 #   safeclaude --persist          # mount ~/.claude for session history
 #   safeclaude --shell                    # drop into a bash shell in the container
+#   safeclaude --restart                  # fresh container, same image
 #   safeclaude --build                  # force rebuild the Docker image
 #
 # Mount scoping (in priority order):
@@ -37,12 +38,13 @@ for arg in "$@"; do
     --persist) SAFECLAUDE_PERSIST_HISTORY=1 ;;
     --shell) SAFECLAUDE_SHELL=1 ;;
     --build) SAFECLAUDE_BUILD=1 ;;
+    --restart) SAFECLAUDE_RESTART=1 ;;
     *) CLAUDE_PASSTHROUGH+=("$arg") ;;
   esac
 done
 
 if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-  echo "note: CLAUDE_CODE_OAUTH_TOKEN not set — Claude will prompt you to authenticate"
+  echo "note: CLAUDE_CODE_OAUTH_TOKEN not set -Claude will prompt you to authenticate"
 fi
 
 # --- Git identity: env override > host git config ---
@@ -53,6 +55,7 @@ GIT_USER_EMAIL="${SAFECLAUDE_GIT_EMAIL:-$(git config user.email 2>/dev/null || t
 GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -z "$GIT_ROOT" ]; then
   echo "error: not inside a git repository"
+  echo "safeclaude only runs inside a git repo to limit what Claude can access. cd into one first."
   exit 1
 fi
 
@@ -114,7 +117,7 @@ if [ "${SAFECLAUDE_SHELL:-0}" = "1" ]; then
   if docker inspect "$CONTAINER_NAME" &>/dev/null; then
     exec docker exec -it -w "$CONTAINER_CWD" "$CONTAINER_NAME" bash
   else
-    echo "error: no running container '$CONTAINER_NAME' — start safeclaude first"
+    echo "error: no running container '$CONTAINER_NAME' -start safeclaude first"
     exit 1
   fi
 fi
@@ -129,7 +132,7 @@ MOUNTS=(
 GIT_COMMON_DIR="$(cd "$GIT_ROOT" && git rev-parse --git-common-dir 2>/dev/null)"
 if [ "$GIT_COMMON_DIR" != ".git" ]; then
   MAIN_GIT_DIR="$(cd "$GIT_ROOT" && cd "$GIT_COMMON_DIR" && pwd)"
-  MOUNTS+=(-v "$MAIN_GIT_DIR:$MAIN_GIT_DIR:ro")
+  MOUNTS+=(-v "$MAIN_GIT_DIR:$MAIN_GIT_DIR")
 fi
 
 # Session history persistence (opt-in via --persist or SAFECLAUDE_PERSIST_HISTORY=1)
@@ -148,6 +151,11 @@ fi
 CLAUDE_ARGS=("--dangerously-skip-permissions")
 if [ ${#CLAUDE_PASSTHROUGH[@]} -gt 0 ]; then
   CLAUDE_ARGS+=("${CLAUDE_PASSTHROUGH[@]}")
+fi
+
+# --- Restart: destroy container, keep image ---
+if [ "${SAFECLAUDE_RESTART:-0}" = "1" ]; then
+  docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
 fi
 
 # --- Reuse existing container if present ---

@@ -6,7 +6,7 @@ A wrapper script that runs [Claude Code](https://docs.anthropic.com/en/docs/clau
 
 ## Why?
 
-Claude Code with `--dangerously-skip-permissions` is powerful but risky on bare metal — it can see your home dir, SSH keys, other repos, everything. `safeclaude` scopes it to just your git repo inside a container.
+Claude Code with `--dangerously-skip-permissions` is powerful but risky on bare metal -it can see your home dir, SSH keys, other repos, everything. `safeclaude` scopes it to just your git repo inside a container.
 
 ## Setup
 
@@ -22,7 +22,9 @@ cd ~/my-project
 safeclaude
 ```
 
-First run builds the Docker image and prompts you to authenticate. Credentials persist inside the container — you only auth once.
+First run builds the Docker image and prompts you to authenticate. Credentials persist inside the container -you only auth once.
+
+**Note:** safeclaude must be run from inside a git repo -it uses the repo root to determine what gets mounted into the container. Running it outside a repo will error.
 
 ## How does it work?
 
@@ -57,8 +59,9 @@ All arguments are forwarded directly to `claude`, so anything that works with `c
 
 Two extra flags for debugging:
 
-- `--shell` — opens a bash shell inside the running container (useful for inspecting the environment, checking git config, etc.)
-- `--build` — destroys the container and rebuilds the Docker image (useful after updating safeclaude itself)
+- `--shell` -opens a bash shell inside the running container (useful for inspecting the environment, checking git config, etc.)
+- `--restart` -destroys the container and creates a fresh one (useful when mounts or env vars change)
+- `--build` -destroys the container and rebuilds the Docker image (useful after updating safeclaude itself)
 
 Claude commits locally inside the container. You review and push from the host when ready.
 
@@ -76,7 +79,7 @@ Set these in `~/safeclaude/.env` or export them in your shell:
 
 ### Container lifecycle
 
-By default, the container is fully isolated — sessions, credentials, and history live only inside it. State persists across runs (exit and come back, everything is still there). Running `--build` destroys the container and starts fresh.
+By default, the container is fully isolated -sessions, credentials, and history live only inside it. State persists across runs (exit and come back, everything is still there). Running `--build` destroys the container and starts fresh.
 
 ### Session history
 
@@ -89,3 +92,15 @@ safeclaude --persist
 ```
 
 Or set `SAFECLAUDE_PERSIST_HISTORY=1` in your `.env`. This mounts `~/.claude` read-write so sessions, settings, and credentials are shared with the host. Use this if you want to seamlessly switch between `claude` and `safeclaude`.
+
+## What can go wrong?
+
+This project is **experimental**. Claude runs with full autonomous permissions inside the container. Here's what it can and can't touch:
+
+**Safe** -your home directory, SSH keys, other repos, system files, and everything else on your host are not mounted. A rogue `rm -rf /` inside the container can't reach them.
+
+**At risk** -your mounted git repo (code + `.git` metadata) is read-write. Claude can modify or delete files, corrupt git refs, or mess with branches. In worktrees, the shared `.git` dir is also writable (required for `git add`/`git commit` to work).
+
+**Recoverable** -since there's no push access by default, nothing leaves your machine. `git fetch` from the remote recovers everything. Worst case you lose uncommitted local work in that one repo.
+
+The container limits the blast radius, but doesn't eliminate risk. Review commits before pushing.

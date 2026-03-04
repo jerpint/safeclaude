@@ -11,7 +11,7 @@ Drop-in replacement for `claude` that runs inside a Docker container.
 ## Project Structure
 
 ```
-safeclaude              # Main command — flag parsing, mount resolution, docker run
+safeclaude              # Main command -flag parsing, mount resolution, docker run
 Dockerfile              # Container image: node:22 + git + gh + tmux + python3 + claude-code
 entrypoint.sh           # Container init: auth, onboarding skip, git identity
 setup-claude-config.py  # Patches ~/.claude.json to skip onboarding + accept trust dialog
@@ -27,14 +27,15 @@ CLAUDE.md               # This file
 
 ```
 safeclaude [args]
-  ├─ Parse flags: --build, --shell, --persist (consumed)
+  ├─ Parse flags: --build, --restart, --shell, --persist (consumed)
   │   All other args → CLAUDE_PASSTHROUGH (forwarded to claude)
   │
   ├─ --shell? → docker exec into running container, exit
   │
   ├─ Detect git root, resolve mount root (env > marker file > git root)
   │
-  ├─ --build? → docker build --no-cache
+  ├─ --build? → docker rm -f + docker build --no-cache
+  │   --restart? → docker rm -f (fresh container, same image)
   │   No image? → docker build (auto first run)
   │
   ├─ Set up mounts (repo, worktree .git)
@@ -48,8 +49,8 @@ safeclaude [args]
 ### Entrypoint (container startup)
 
 1. Write OAuth credentials if `CLAUDE_CODE_OAUTH_TOKEN` is set
-2. Patch `~/.claude.json` — skip onboarding, accept trust dialog for working directory
-3. Configure git — safe.directory, user.name/email from env vars
+2. Patch `~/.claude.json` -skip onboarding, accept trust dialog for working directory
+3. Configure git -safe.directory, user.name/email from env vars
 4. Alias `cc="claude --dangerously-skip-permissions"`
 5. `exec "$@"` (run claude or bash)
 
@@ -66,7 +67,7 @@ Container path matches host absolute path so Claude session keys are portable.
 
 ### Container Naming
 
-`safeclaude-<basename of mount root>` — one container per repo. Running safeclaude again reuses the existing container (start + exec if stopped, exec if running). `--build` destroys it and starts fresh. `--shell` execs bash into it.
+`safeclaude-<basename of mount root>` -one container per repo. Running safeclaude again reuses the existing container (start + exec if stopped, exec if running). `--build` destroys it and starts fresh. `--shell` execs bash into it.
 
 ## Configuration
 
@@ -82,19 +83,19 @@ Container path matches host absolute path so Claude session keys are portable.
 
 ### Mount Scoping (priority order)
 
-1. `SAFECLAUDE_MOUNT` env var — explicit path
-2. `.safeclaude-mount` marker file — walk up from cwd, contents = mount path
-3. Git repo/worktree root — default
+1. `SAFECLAUDE_MOUNT` env var -explicit path
+2. `.safeclaude-mount` marker file -walk up from cwd, contents = mount path
+3. Git repo/worktree root -default
 
 ## Design Principles
 
-- **Ephemeral by default** — no host mounts for credentials; state lives in the container, `--build` resets it
-- **Minimal surface** — only mount the repo, nothing else from the host
-- **Zero config by default** — auto-builds image, inherits host git identity, auto-detects repo
-- **Commit inside, push outside** — no SSH keys or GitHub tokens in the container
-- **MCP from repo** — no MCP servers injected; use `.claude/settings.json` in your repo
-- **Passthrough** — all unknown flags forwarded to claude as-is
+- **Ephemeral by default** -no host mounts for credentials; state lives in the container, `--build` resets it
+- **Minimal surface** -only mount the repo, nothing else from the host
+- **Zero config by default** -auto-builds image, inherits host git identity, auto-detects repo
+- **Commit inside, push outside** -no SSH keys or GitHub tokens in the container
+- **MCP from repo** -no MCP servers injected; use `.claude/settings.json` in your repo
+- **Passthrough** -all unknown flags forwarded to claude as-is
 
 ## Key Files
 
-- `HUMANS.md` — user-facing quickstart and examples. Keep in sync when changing flags or usage.
+- `HUMANS.md` -user-facing quickstart and examples. Keep in sync when changing flags or usage.
