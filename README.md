@@ -29,6 +29,7 @@ safeclaude "fix the auth bug"       # start with a prompt
 safeclaude --resume                 # resume last conversation
 safeclaude -p "do the thing"        # pass any claude flags
 safeclaude --github                  # enable GitHub CLI access
+safeclaude --persist-history          # mount ~/.claude for session history
 ```
 
 ## What it has access to
@@ -37,8 +38,9 @@ safeclaude --github                  # enable GitHub CLI access
 |---|---|---|---|
 | Git repo / worktree parent | `/workspace` | read/write | Your code |
 | `~/.config/gh` | `/home/node/.config/gh` | read/write | GitHub CLI auth (opt-in: `SAFECLAUDE_GH=1`) |
-| `~/.claude` | `/home/node/.claude-host` | read-only | Host Claude settings reference |
-| `~/.safeclaude/` | `/home/node/.claude` | read/write | Credentials + config persistence |
+| `~/.claude` | `/home/node/.claude-host` | read-only | Host Claude settings reference (default) |
+| `~/.claude` | `/home/node/.claude` | read/write | Shared session history (opt-in: `SAFECLAUDE_PERSIST_HISTORY=1`) |
+| `~/.safeclaude/` | `/home/node/.claude` | read/write | Isolated credentials persistence (default) |
 
 Network is unrestricted (GitHub API, Linear MCP, Claude API, etc).
 
@@ -86,6 +88,7 @@ Then just `safeclaude` from anywhere.
 | `SAFECLAUDE_MOUNT` | Override mount root |
 | `SAFECLAUDE_IMAGE` | Override Docker image name (default: `safeclaude`) |
 | `SAFECLAUDE_GH` | Set to `1` to mount GitHub CLI auth (off by default) |
+| `SAFECLAUDE_PERSIST_HISTORY` | Set to `1` to mount `~/.claude` read-write for shared session history |
 | `SAFECLAUDE_EXTRA_MOUNTS` | Additional `-v` flags |
 
 ## MCP servers

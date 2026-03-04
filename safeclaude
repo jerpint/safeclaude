@@ -7,6 +7,7 @@
 #   safeclaude --resume                 # resume last conversation
 #   safeclaude -p "do the thing"        # pass any claude flags
 #   safeclaude --github                  # enable GitHub CLI access
+#   safeclaude --persist-history          # mount ~/.claude for session history
 #
 # Mount scoping (in priority order):
 #   1. SAFECLAUDE_MOUNT=<path>          # explicit mount root
@@ -104,20 +105,27 @@ if [ "$GIT_COMMON_DIR" != ".git" ]; then
   MOUNTS+=(-v "$MAIN_GIT_DIR:$MAIN_GIT_DIR:ro")
 fi
 
-if [ -d "$HOME/.claude" ]; then
-  MOUNTS+=(-v "$HOME/.claude:/home/node/.claude-host:ro")
+# Session history persistence (opt-in via --persist-history or SAFECLAUDE_PERSIST_HISTORY=1)
+# Mounts ~/.claude read-write so sessions, settings, and credentials are shared with host.
+if [ "${SAFECLAUDE_PERSIST_HISTORY:-0}" = "1" ]; then
+  mkdir -p "$HOME/.claude"
+  MOUNTS+=(-v "$HOME/.claude:/home/node/.claude")
+else
+  if [ -d "$HOME/.claude" ]; then
+    MOUNTS+=(-v "$HOME/.claude:/home/node/.claude-host:ro")
+  fi
+  # Isolated persist dir — credentials survive across runs but sessions stay sandboxed
+  PERSIST_DIR="$HOME/.safeclaude"
+  mkdir -p "$PERSIST_DIR"
+  MOUNTS+=(-v "$PERSIST_DIR:/home/node/.claude")
 fi
-
-# Persist credentials across runs — mount .claude dir so writes go to host
-PERSIST_DIR="$HOME/.safeclaude"
-mkdir -p "$PERSIST_DIR"
-MOUNTS+=(-v "$PERSIST_DIR:/home/node/.claude")
 
 # --- Parse safeclaude-specific flags ---
 CLAUDE_PASSTHROUGH=()
 for arg in "$@"; do
   case "$arg" in
     --github) SAFECLAUDE_GH=1 ;;
+    --persist-history) SAFECLAUDE_PERSIST_HISTORY=1 ;;
     *) CLAUDE_PASSTHROUGH+=("$arg") ;;
   esac
 done
