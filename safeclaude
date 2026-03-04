@@ -33,6 +33,10 @@ if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
   echo "note: CLAUDE_CODE_OAUTH_TOKEN not set — Claude will prompt you to authenticate"
 fi
 
+# --- Git identity: env override > host git config ---
+GIT_USER_NAME="${SAFECLAUDE_GIT_NAME:-$(git config user.name 2>/dev/null || true)}"
+GIT_USER_EMAIL="${SAFECLAUDE_GIT_EMAIL:-$(git config user.email 2>/dev/null || true)}"
+
 # --- Detect git context ---
 GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -z "$GIT_ROOT" ]; then
@@ -73,14 +77,11 @@ if [ ! -d "$MOUNT_ROOT" ]; then
 fi
 
 # --- Map current host path to container path ---
+# Mount at the same absolute path inside the container so Claude session keys
+# match between host and container (enables interchangeable claude/safeclaude use).
 HOST_CWD="$(pwd)"
-CONTAINER_MOUNT="/workspace"
-if [[ "$HOST_CWD" == "$MOUNT_ROOT"* ]]; then
-  RELATIVE="${HOST_CWD#$MOUNT_ROOT}"
-  CONTAINER_CWD="${CONTAINER_MOUNT}${RELATIVE}"
-else
-  CONTAINER_CWD="$CONTAINER_MOUNT"
-fi
+CONTAINER_MOUNT="$MOUNT_ROOT"
+CONTAINER_CWD="$HOST_CWD"
 
 # --- Build image if needed ---
 if ! docker image inspect "$IMAGE" &>/dev/null; then
@@ -150,6 +151,8 @@ exec docker run -it \
   "${MOUNTS[@]}" \
   $SAFECLAUDE_EXTRA_MOUNTS \
   -e CLAUDE_CODE_OAUTH_TOKEN="${CLAUDE_CODE_OAUTH_TOKEN}" \
+  ${GIT_USER_NAME:+-e GIT_USER_NAME="$GIT_USER_NAME"} \
+  ${GIT_USER_EMAIL:+-e GIT_USER_EMAIL="$GIT_USER_EMAIL"} \
   -w "$CONTAINER_CWD" \
   "$IMAGE" \
   claude "${CLAUDE_ARGS[@]}"
