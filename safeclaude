@@ -6,7 +6,6 @@
 #   safeclaude "fix the auth bug"       # start with a prompt
 #   safeclaude --resume                 # resume last conversation
 #   safeclaude -p "do the thing"        # pass any claude flags
-#   safeclaude --github                  # enable GitHub CLI access
 #   safeclaude --persist-history          # mount ~/.claude for session history
 #   safeclaude --shell                    # drop into a bash shell in the container
 #   safeclaude --build                  # force rebuild the Docker image
@@ -35,7 +34,6 @@ fi
 CLAUDE_PASSTHROUGH=()
 for arg in "$@"; do
   case "$arg" in
-    --github) SAFECLAUDE_GH=1 ;;
     --persist-history) SAFECLAUDE_PERSIST_HISTORY=1 ;;
     --shell) SAFECLAUDE_SHELL=1 ;;
     --build) SAFECLAUDE_BUILD=1 ;;
@@ -138,10 +136,8 @@ else
   MOUNTS+=(-v "$PERSIST_DIR:/home/node/.claude")
 fi
 
-# GitHub CLI access (opt-in via --github or SAFECLAUDE_GH=1)
-if [ "${SAFECLAUDE_GH:-0}" = "1" ] && [ -d "$HOME/.config/gh" ]; then
-  MOUNTS+=(-v "$HOME/.config/gh:/home/node/.config/gh")
-fi
+# TODO: Support scoped SSH deploy keys or fine-grained GitHub tokens for
+# push access from inside the container, without mounting full host credentials.
 
 # --- Claude args ---
 CLAUDE_ARGS=("--dangerously-skip-permissions")

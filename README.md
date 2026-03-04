@@ -28,7 +28,6 @@ safeclaude                          # start claude in current repo
 safeclaude "fix the auth bug"       # start with a prompt
 safeclaude --resume                 # resume last conversation
 safeclaude -p "do the thing"        # pass any claude flags
-safeclaude --github                  # enable GitHub CLI access
 safeclaude --persist-history          # mount ~/.claude for session history
 safeclaude --shell                    # drop into a bash shell in the container
 safeclaude --build                  # force rebuild the Docker image
@@ -39,7 +38,6 @@ safeclaude --build                  # force rebuild the Docker image
 | Mount | Container path | Mode | Purpose |
 |---|---|---|---|
 | Git repo / worktree parent | `/workspace` | read/write | Your code |
-| `~/.config/gh` | `/home/node/.config/gh` | read/write | GitHub CLI auth (opt-in: `SAFECLAUDE_GH=1`) |
 | `~/.claude` | `/home/node/.claude-host` | read-only | Host Claude settings reference (default) |
 | `~/.claude` | `/home/node/.claude` | read/write | Shared session history (opt-in: `SAFECLAUDE_PERSIST_HISTORY=1`) |
 | `~/.safeclaude/` | `/home/node/.claude` | read/write | Isolated credentials persistence (default) |
@@ -89,7 +87,6 @@ Then just `safeclaude` from anywhere.
 | `CLAUDE_CODE_OAUTH_TOKEN` | Skip interactive auth |
 | `SAFECLAUDE_MOUNT` | Override mount root |
 | `SAFECLAUDE_IMAGE` | Override Docker image name (default: `safeclaude`) |
-| `SAFECLAUDE_GH` | Set to `1` to mount GitHub CLI auth (off by default) |
 | `SAFECLAUDE_PERSIST_HISTORY` | Set to `1` to mount `~/.claude` read-write for shared session history |
 | `SAFECLAUDE_GIT_NAME` | Override git `user.name` inside the container (default: host `git config user.name`) |
 | `SAFECLAUDE_GIT_EMAIL` | Override git `user.email` inside the container (default: host `git config user.email`) |
