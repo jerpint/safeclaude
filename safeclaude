@@ -9,7 +9,7 @@
 #   safeclaude --github                  # enable GitHub CLI access
 #   safeclaude --persist-history          # mount ~/.claude for session history
 #   safeclaude --shell                    # drop into a bash shell in the container
-#   safeclaude --rebuild                  # force rebuild the Docker image
+#   safeclaude --build                  # force rebuild the Docker image
 #
 # Mount scoping (in priority order):
 #   1. SAFECLAUDE_MOUNT=<path>          # explicit mount root
@@ -38,7 +38,7 @@ for arg in "$@"; do
     --github) SAFECLAUDE_GH=1 ;;
     --persist-history) SAFECLAUDE_PERSIST_HISTORY=1 ;;
     --shell) SAFECLAUDE_SHELL=1 ;;
-    --rebuild) SAFECLAUDE_REBUILD=1 ;;
+    --build) SAFECLAUDE_BUILD=1 ;;
     *) CLAUDE_PASSTHROUGH+=("$arg") ;;
   esac
 done
@@ -98,8 +98,8 @@ CONTAINER_MOUNT="$MOUNT_ROOT"
 CONTAINER_CWD="$HOST_CWD"
 
 # --- Build image (force rebuild or if missing) ---
-if [ "${SAFECLAUDE_REBUILD:-0}" = "1" ]; then
-  echo "Rebuilding safeclaude image..."
+if [ "${SAFECLAUDE_BUILD:-0}" = "1" ]; then
+  echo "Building safeclaude image..."
   docker build --no-cache -t "$IMAGE" "$SCRIPT_DIR"
 elif ! docker image inspect "$IMAGE" &>/dev/null; then
   echo "Building safeclaude image..."
