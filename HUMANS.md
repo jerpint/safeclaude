@@ -22,7 +22,7 @@ cd ~/my-project
 safeclaude
 ```
 
-First run builds the Docker image and prompts you to authenticate. Credentials persist to `~/.safeclaude/` — you only auth once.
+First run builds the Docker image and prompts you to authenticate. Credentials persist inside the container — you only auth once.
 
 ## How does it work?
 
@@ -34,7 +34,6 @@ you run safeclaude from any git repo
         │
         ▼
   mounts repo into a Docker container
-  (+ Claude credentials)
         │
         ▼
   runs `claude --dangerously-skip-permissions`
@@ -59,7 +58,7 @@ All arguments are forwarded directly to `claude`, so anything that works with `c
 Two extra flags for debugging:
 
 - `--shell` — opens a bash shell inside the running container (useful for inspecting the environment, checking git config, etc.)
-- `--build` — forces a rebuild of the Docker image (useful after updating safeclaude itself)
+- `--build` — destroys the container and rebuilds the Docker image (useful after updating safeclaude itself)
 
 Claude commits locally inside the container. You review and push from the host when ready.
 
@@ -75,9 +74,13 @@ Set these in `~/safeclaude/.env` or export them in your shell:
 | `SAFECLAUDE_MOUNT` | Override which directory gets mounted (default: git repo root) |
 | `SAFECLAUDE_EXTRA_MOUNTS` | Additional `-v` flags for docker run |
 
+### Container lifecycle
+
+By default, the container is fully isolated — sessions, credentials, and history live only inside it. State persists across runs (exit and come back, everything is still there). Running `--build` destroys the container and starts fresh.
+
 ### Session history
 
-By default, each safeclaude container is isolated — sessions and credentials live in `~/.safeclaude/`, separate from your host's `~/.claude/`. This means `claude --resume` on the host won't see safeclaude sessions and vice versa.
+By default, `claude --resume` on the host won't see safeclaude sessions and vice versa.
 
 To share session history between safeclaude and your host:
 

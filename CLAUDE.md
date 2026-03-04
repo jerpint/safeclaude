@@ -37,9 +37,12 @@ safeclaude [args]
   ├─ --build? → docker build --no-cache
   │   No image? → docker build (auto first run)
   │
-  ├─ Set up mounts (repo, worktree .git, credentials)
+  ├─ Set up mounts (repo, worktree .git)
   │
-  └─ docker run → entrypoint.sh → claude --dangerously-skip-permissions [passthrough args]
+  ├─ Container exists? → docker start + docker exec (reuse)
+  │   Container running? → docker exec (reuse)
+  │
+  └─ No container → docker run → entrypoint.sh → claude --dangerously-skip-permissions [passthrough args]
 ```
 
 ### Entrypoint (container startup)
@@ -57,14 +60,13 @@ safeclaude [args]
 | Git repo/worktree | read-write | Always |
 | Main .git dir (worktrees) | read-only | When in a worktree |
 | `~/.claude` → `/home/node/.claude-host` | read-only | Default (host settings reference) |
-| `~/.safeclaude` → `/home/node/.claude` | read-write | Default (isolated credentials) |
 | `~/.claude` → `/home/node/.claude` | read-write | `--persist-history` (shared sessions) |
 
 Container path matches host absolute path so Claude session keys are portable.
 
 ### Container Naming
 
-`safeclaude-<basename of mount root>` — one container per repo. Running safeclaude again in the same repo replaces the previous container. `--shell` execs into the running one instead.
+`safeclaude-<basename of mount root>` — one container per repo. Running safeclaude again reuses the existing container (start + exec if stopped, exec if running). `--build` destroys it and starts fresh. `--shell` execs bash into it.
 
 ## Configuration
 
@@ -86,6 +88,7 @@ Container path matches host absolute path so Claude session keys are portable.
 
 ## Design Principles
 
+- **Ephemeral by default** — no host mounts for credentials; state lives in the container, `--build` resets it
 - **Minimal surface** — only mount the repo, nothing else from the host
 - **Zero config by default** — auto-builds image, inherits host git identity, auto-detects repo
 - **Commit inside, push outside** — no SSH keys or GitHub tokens in the container
