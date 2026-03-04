@@ -108,6 +108,16 @@ fi
 MOUNT_BASENAME="$(basename "$MOUNT_ROOT")"
 CONTAINER_NAME="${CONTAINER_PREFIX}-${MOUNT_BASENAME}"
 
+# --- Shell into running container if --shell ---
+if [ "${SAFECLAUDE_SHELL:-0}" = "1" ]; then
+  if docker inspect "$CONTAINER_NAME" &>/dev/null; then
+    exec docker exec -it -w "$CONTAINER_CWD" "$CONTAINER_NAME" bash
+  else
+    echo "error: no running container '$CONTAINER_NAME' — start safeclaude first"
+    exit 1
+  fi
+fi
+
 # --- Mounts ---
 MOUNTS=(
   -v "$MOUNT_ROOT:$CONTAINER_MOUNT"
@@ -148,13 +158,6 @@ fi
 # --- Clean up previous container ---
 docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
 
-# --- Entrypoint command ---
-if [ "${SAFECLAUDE_SHELL:-0}" = "1" ]; then
-  CONTAINER_CMD=(bash)
-else
-  CONTAINER_CMD=(claude "${CLAUDE_ARGS[@]}")
-fi
-
 # --- Run ---
 exec docker run -it \
   --name "$CONTAINER_NAME" \
@@ -165,4 +168,4 @@ exec docker run -it \
   ${GIT_USER_EMAIL:+-e GIT_USER_EMAIL="$GIT_USER_EMAIL"} \
   -w "$CONTAINER_CWD" \
   "$IMAGE" \
-  "${CONTAINER_CMD[@]}"
+  claude "${CLAUDE_ARGS[@]}"
