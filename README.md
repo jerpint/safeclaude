@@ -89,6 +89,8 @@ Then just `safeclaude` from anywhere.
 | `SAFECLAUDE_IMAGE` | Override Docker image name (default: `safeclaude`) |
 | `SAFECLAUDE_GH` | Set to `1` to mount GitHub CLI auth (off by default) |
 | `SAFECLAUDE_PERSIST_HISTORY` | Set to `1` to mount `~/.claude` read-write for shared session history |
+| `SAFECLAUDE_GIT_NAME` | Override git `user.name` inside the container (default: host `git config user.name`) |
+| `SAFECLAUDE_GIT_EMAIL` | Override git `user.email` inside the container (default: host `git config user.email`) |
 | `SAFECLAUDE_EXTRA_MOUNTS` | Additional `-v` flags |
 
 ## MCP servers
