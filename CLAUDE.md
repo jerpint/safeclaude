@@ -27,7 +27,7 @@ CLAUDE.md               # This file
 
 ```
 safeclaude [args]
-  ├─ Parse flags: --build, --shell, --persist-history (consumed)
+  ├─ Parse flags: --build, --shell, --persist (consumed)
   │   All other args → CLAUDE_PASSTHROUGH (forwarded to claude)
   │
   ├─ --shell? → docker exec into running container, exit
@@ -60,7 +60,7 @@ safeclaude [args]
 | Git repo/worktree | read-write | Always |
 | Main .git dir (worktrees) | read-only | When in a worktree |
 | `~/.claude` → `/home/node/.claude-host` | read-only | Default (host settings reference) |
-| `~/.claude` → `/home/node/.claude` | read-write | `--persist-history` (shared sessions) |
+| `~/.claude` → `/home/node/.claude` | read-write | `--persist` (shared sessions) |
 
 Container path matches host absolute path so Claude session keys are portable.
 

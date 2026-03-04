@@ -85,7 +85,7 @@ By default, `claude --resume` on the host won't see safeclaude sessions and vice
 To share session history between safeclaude and your host:
 
 ```bash
-safeclaude --persist-history
+safeclaude --persist
 ```
 
 Or set `SAFECLAUDE_PERSIST_HISTORY=1` in your `.env`. This mounts `~/.claude` read-write so sessions, settings, and credentials are shared with the host. Use this if you want to seamlessly switch between `claude` and `safeclaude`.

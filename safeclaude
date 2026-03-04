@@ -6,7 +6,7 @@
 #   safeclaude "fix the auth bug"       # start with a prompt
 #   safeclaude --resume                 # resume last conversation
 #   safeclaude -p "do the thing"        # pass any claude flags
-#   safeclaude --persist-history          # mount ~/.claude for session history
+#   safeclaude --persist          # mount ~/.claude for session history
 #   safeclaude --shell                    # drop into a bash shell in the container
 #   safeclaude --build                  # force rebuild the Docker image
 #
@@ -34,7 +34,7 @@ fi
 CLAUDE_PASSTHROUGH=()
 for arg in "$@"; do
   case "$arg" in
-    --persist-history) SAFECLAUDE_PERSIST_HISTORY=1 ;;
+    --persist) SAFECLAUDE_PERSIST_HISTORY=1 ;;
     --shell) SAFECLAUDE_SHELL=1 ;;
     --build) SAFECLAUDE_BUILD=1 ;;
     *) CLAUDE_PASSTHROUGH+=("$arg") ;;
@@ -132,7 +132,7 @@ if [ "$GIT_COMMON_DIR" != ".git" ]; then
   MOUNTS+=(-v "$MAIN_GIT_DIR:$MAIN_GIT_DIR:ro")
 fi
 
-# Session history persistence (opt-in via --persist-history or SAFECLAUDE_PERSIST_HISTORY=1)
+# Session history persistence (opt-in via --persist or SAFECLAUDE_PERSIST_HISTORY=1)
 # Mounts ~/.claude read-write so sessions, settings, and credentials are shared with host.
 if [ "${SAFECLAUDE_PERSIST_HISTORY:-0}" = "1" ]; then
   mkdir -p "$HOME/.claude"
