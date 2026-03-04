@@ -79,6 +79,7 @@ Container path matches host absolute path so Claude session keys are portable.
 | `SAFECLAUDE_PERSIST_HISTORY` | `1` to mount `~/.claude` read-write for shared session history |
 | `SAFECLAUDE_GIT_NAME` | Override git `user.name` (default: host `git config user.name`) |
 | `SAFECLAUDE_GIT_EMAIL` | Override git `user.email` (default: host `git config user.email`) |
+| `SAFECLAUDE_HOST_NETWORK` | `1` to expose host localhost as `host.docker.internal` inside the container |
 | `SAFECLAUDE_EXTRA_MOUNTS` | Additional `-v` flags for docker run |
 
 ### Mount Scoping (priority order)

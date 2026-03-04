@@ -112,16 +112,6 @@ fi
 MOUNT_BASENAME="$(basename "$MOUNT_ROOT")"
 CONTAINER_NAME="${CONTAINER_PREFIX}-${MOUNT_BASENAME}"
 
-# --- Shell into running container if --shell ---
-if [ "${SAFECLAUDE_SHELL:-0}" = "1" ]; then
-  if docker inspect "$CONTAINER_NAME" &>/dev/null; then
-    exec docker exec -it -w "$CONTAINER_CWD" "$CONTAINER_NAME" bash
-  else
-    echo "error: no running container '$CONTAINER_NAME' -start safeclaude first"
-    exit 1
-  fi
-fi
-
 # --- Mounts ---
 MOUNTS=(
   -v "$MOUNT_ROOT:$CONTAINER_MOUNT"
@@ -153,6 +143,13 @@ if [ ${#CLAUDE_PASSTHROUGH[@]} -gt 0 ]; then
   CLAUDE_ARGS+=("${CLAUDE_PASSTHROUGH[@]}")
 fi
 
+# --- Determine command: claude or bash ---
+if [ "${SAFECLAUDE_SHELL:-0}" = "1" ]; then
+  CONTAINER_CMD=(bash)
+else
+  CONTAINER_CMD=(claude "${CLAUDE_ARGS[@]}")
+fi
+
 # --- Restart: destroy container, keep image ---
 if [ "${SAFECLAUDE_RESTART:-0}" = "1" ]; then
   docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
@@ -161,10 +158,10 @@ fi
 # --- Reuse existing container if present ---
 if docker inspect "$CONTAINER_NAME" &>/dev/null; then
   if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null)" = "true" ]; then
-    exec docker exec -it -w "$CONTAINER_CWD" "$CONTAINER_NAME" claude "${CLAUDE_ARGS[@]}"
+    exec docker exec -it -w "$CONTAINER_CWD" "$CONTAINER_NAME" "${CONTAINER_CMD[@]}"
   else
     docker start "$CONTAINER_NAME" >/dev/null
-    exec docker exec -it -w "$CONTAINER_CWD" "$CONTAINER_NAME" claude "${CLAUDE_ARGS[@]}"
+    exec docker exec -it -w "$CONTAINER_CWD" "$CONTAINER_NAME" "${CONTAINER_CMD[@]}"
   fi
 fi
 
@@ -176,6 +173,7 @@ exec docker run -it \
   -e CLAUDE_CODE_OAUTH_TOKEN="${CLAUDE_CODE_OAUTH_TOKEN}" \
   ${GIT_USER_NAME:+-e GIT_USER_NAME="$GIT_USER_NAME"} \
   ${GIT_USER_EMAIL:+-e GIT_USER_EMAIL="$GIT_USER_EMAIL"} \
+  ${SAFECLAUDE_HOST_NETWORK:+--add-host=host.docker.internal:host-gateway} \
   -w "$CONTAINER_CWD" \
   "$IMAGE" \
-  claude "${CLAUDE_ARGS[@]}"
+  "${CONTAINER_CMD[@]}"

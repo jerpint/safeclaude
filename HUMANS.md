@@ -1,5 +1,7 @@
 # HUMANS.md
 
+> **NOTE:** This is an experimental repo, work is in progress, pull regularly and use at your own risk.
+
 ## What is this?
 
 A wrapper script that runs [Claude Code](https://docs.anthropic.com/en/docs/claude-code) inside a Docker container. You get full autonomous mode (`--dangerously-skip-permissions`) without giving Claude access to your entire machine.
@@ -75,6 +77,7 @@ Set these in `~/safeclaude/.env` or export them in your shell:
 | `SAFECLAUDE_GIT_NAME` | Override git `user.name` (default: your host's git config) |
 | `SAFECLAUDE_GIT_EMAIL` | Override git `user.email` (default: your host's git config) |
 | `SAFECLAUDE_MOUNT` | Override which directory gets mounted (default: git repo root) |
+| `SAFECLAUDE_HOST_NETWORK` | Set to `1` to expose host localhost as `host.docker.internal` |
 | `SAFECLAUDE_EXTRA_MOUNTS` | Additional `-v` flags for docker run |
 
 ### Container lifecycle
