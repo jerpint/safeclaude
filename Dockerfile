@@ -29,7 +29,7 @@ RUN chown -R node:node /workspace /home/node
 
 USER node
 
-COPY --chown=node:node entrypoint.sh /home/node/entrypoint.sh
+COPY --chown=node:node entrypoint.sh setup-claude-config.py /home/node/
 RUN chmod +x /home/node/entrypoint.sh
 
 WORKDIR /workspace

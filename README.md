@@ -95,15 +95,16 @@ Then just `safeclaude` from anywhere.
 
 ## MCP servers
 
-Linear MCP (`https://mcp.linear.app/mcp`) is configured automatically by the entrypoint. First use of a Linear tool will prompt OAuth in the browser.
+MCP servers are configured per-repo via `.claude/settings.json` (or `.claude/settings.local.json`). No MCP servers are injected by safeclaude — your repo's config is used as-is.
 
 ## Files
 
 ```
 ~/safeclaude/
-  Dockerfile        # node:22 + git + gh + tmux + python3 + claude-code
-  entrypoint.sh     # Auth, onboarding skip, Linear MCP, git config
-  safeclaude        # The command
-  .env              # Your token (gitignored)
-  .env.example      # Template
+  Dockerfile              # node:22 + git + gh + tmux + python3 + claude-code
+  entrypoint.sh           # Auth, onboarding skip, git config
+  setup-claude-config.py  # Claude onboarding/trust config helper
+  safeclaude              # The command
+  .env                    # Your token (gitignored)
+  .env.example            # Template
 ```

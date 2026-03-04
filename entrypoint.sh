@@ -10,31 +10,7 @@ if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
 fi
 
 # --- Skip first-run onboarding ---
-CONTAINER_CWD="$(pwd)"
-python3 -c "
-import json, sys, os
-p = '/home/node/.claude.json'
-data = {}
-if os.path.exists(p):
-    with open(p) as f:
-        data = json.load(f)
-data['hasCompletedOnboarding'] = True
-if 'projects' not in data:
-    data['projects'] = {}
-cwd = sys.argv[1]
-if cwd not in data['projects']:
-    data['projects'][cwd] = {}
-proj = data['projects'][cwd]
-proj['hasTrustDialogAccepted'] = True
-if 'mcpServers' not in proj:
-    proj['mcpServers'] = {}
-proj['mcpServers']['linear'] = {
-    'type': 'http',
-    'url': 'https://mcp.linear.app/mcp'
-}
-with open(p, 'w') as f:
-    json.dump(data, f, indent=2)
-" "$CONTAINER_CWD" 2>/dev/null || {
+python3 /home/node/setup-claude-config.py "$(pwd)" 2>/dev/null || {
   echo '{"hasCompletedOnboarding":true}' > /home/node/.claude.json
 }
 
