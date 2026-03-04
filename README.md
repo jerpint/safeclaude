@@ -29,7 +29,7 @@ safeclaude "fix the auth bug"       # start with a prompt
 safeclaude --resume                 # resume last conversation
 safeclaude -p "do the thing"        # pass any claude flags
 safeclaude --persist-history          # mount ~/.claude for session history
-safeclaude --shell                    # drop into a bash shell in the container
+safeclaude --shell                    # bash into the running container
 safeclaude --build                  # force rebuild the Docker image
 ```
 
