@@ -73,11 +73,11 @@ Set these in `~/safeclaude/.env` or export them in your shell:
 
 | Env var | Purpose |
 |---|---|
-| `CLAUDE_CODE_OAUTH_TOKEN` | Skip interactive auth (set once, persists automatically) |
 | `SAFECLAUDE_GIT_NAME` | Override git `user.name` (default: your host's git config) |
 | `SAFECLAUDE_GIT_EMAIL` | Override git `user.email` (default: your host's git config) |
 | `SAFECLAUDE_MOUNT` | Override which directory gets mounted (default: git repo root) |
 | `SAFECLAUDE_HOST_NETWORK` | Set to `1` to expose host localhost as `host.docker.internal` |
+| `SAFECLAUDE_PERSIST_HISTORY` | Set to `1` to share `~/.claude` (sessions, settings) with host |
 | `SAFECLAUDE_EXTRA_MOUNTS` | Additional `-v` flags for docker run |
 
 ### Container lifecycle
@@ -86,15 +86,7 @@ By default, the container is fully isolated -sessions, credentials, and history 
 
 ### Session history
 
-By default, `claude --resume` on the host won't see safeclaude sessions and vice versa.
-
-To share session history between safeclaude and your host:
-
-```bash
-safeclaude --persist
-```
-
-Or set `SAFECLAUDE_PERSIST_HISTORY=1` in your `.env`. This mounts `~/.claude` read-write so sessions, settings, and credentials are shared with the host. Use this if you want to seamlessly switch between `claude` and `safeclaude`.
+By default, `claude --resume` on the host won't see safeclaude sessions and vice versa. To share session history, use `safeclaude --persist` (or set `SAFECLAUDE_PERSIST_HISTORY=1`). This mounts `~/.claude` read-write so sessions, settings, and credentials are shared with the host.
 
 ## What can go wrong?
 

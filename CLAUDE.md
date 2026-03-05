@@ -17,7 +17,7 @@ entrypoint.sh           # Container init: auth, onboarding skip, git identity
 setup-claude-config.py  # Patches ~/.claude.json to skip onboarding + accept trust dialog
 HUMANS.md               # User-facing docs
 CLAUDE.md               # This file
-.env                    # CLAUDE_CODE_OAUTH_TOKEN (gitignored)
+.env                    # Environment overrides (gitignored)
 .env.example            # Template
 ```
 
@@ -48,11 +48,10 @@ safeclaude [args]
 
 ### Entrypoint (container startup)
 
-1. Write OAuth credentials if `CLAUDE_CODE_OAUTH_TOKEN` is set
-2. Patch `~/.claude.json` -skip onboarding, accept trust dialog for working directory
-3. Configure git -safe.directory, user.name/email from env vars
-4. Alias `cc="claude --dangerously-skip-permissions"`
-5. `exec "$@"` (run claude or bash)
+1. Patch `~/.claude.json` -skip onboarding, accept trust dialog for working directory
+2. Configure git -safe.directory, user.name/email from env vars
+3. Alias `cc="claude --dangerously-skip-permissions"`
+4. `exec "$@"` (run claude or bash)
 
 ### Mount Strategy
 
@@ -73,7 +72,6 @@ Container path matches host absolute path so Claude session keys are portable.
 
 | Env var | Purpose |
 |---|---|
-| `CLAUDE_CODE_OAUTH_TOKEN` | Skip interactive auth |
 | `SAFECLAUDE_MOUNT` | Override mount root |
 | `SAFECLAUDE_IMAGE` | Override Docker image name (default: `safeclaude`) |
 | `SAFECLAUDE_PERSIST_HISTORY` | `1` to mount `~/.claude` read-write for shared session history |

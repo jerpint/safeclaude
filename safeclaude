@@ -16,7 +16,7 @@
 #   2. .safeclaude-mount file           # in any parent dir, contains mount path
 #   3. Git repo / worktree root          # just the current repo or worktree
 #
-# Auth: set CLAUDE_CODE_OAUTH_TOKEN in ~/safeclaude/.env, or auth interactively on first run.
+# Auth: Claude prompts interactively on first run; credentials persist inside the container.
 
 set -e
 
@@ -43,9 +43,6 @@ for arg in "$@"; do
   esac
 done
 
-if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-  echo "note: CLAUDE_CODE_OAUTH_TOKEN not set -Claude will prompt you to authenticate"
-fi
 
 # --- Git identity: env override > host git config ---
 GIT_USER_NAME="${SAFECLAUDE_GIT_NAME:-$(git config user.name 2>/dev/null || true)}"
@@ -170,7 +167,6 @@ exec docker run -it \
   --name "$CONTAINER_NAME" \
   "${MOUNTS[@]}" \
   $SAFECLAUDE_EXTRA_MOUNTS \
-  -e CLAUDE_CODE_OAUTH_TOKEN="${CLAUDE_CODE_OAUTH_TOKEN}" \
   ${GIT_USER_NAME:+-e GIT_USER_NAME="$GIT_USER_NAME"} \
   ${GIT_USER_EMAIL:+-e GIT_USER_EMAIL="$GIT_USER_EMAIL"} \
   ${SAFECLAUDE_HOST_NETWORK:+--add-host=host.docker.internal:host-gateway} \

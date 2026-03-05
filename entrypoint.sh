@@ -1,13 +1,7 @@
 #!/bin/bash
 set -e
 
-# --- Auth: env token > persisted credentials > interactive OAuth flow ---
 mkdir -p /home/node/.claude
-if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-  printf '{"claudeAiOauth":{"accessToken":"%s","expiresAt":9999999999999}}' \
-    "$CLAUDE_CODE_OAUTH_TOKEN" > /home/node/.claude/.credentials.json
-  chmod 600 /home/node/.claude/.credentials.json
-fi
 
 # --- Skip first-run onboarding ---
 python3 /home/node/setup-claude-config.py "$(pwd)" 2>/dev/null || {
