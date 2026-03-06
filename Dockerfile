@@ -6,6 +6,9 @@ FROM node:22-slim
 RUN apt-get update && apt-get install -y \
     curl \
     git \
+    jq \
+    make \
+    ripgrep \
     tmux \
     openssh-client \
     python3 \
@@ -28,6 +31,10 @@ RUN mkdir -p /workspace
 RUN chown -R node:node /workspace /home/node
 
 USER node
+
+# uv (Python package manager)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/home/node/.local/bin:$PATH"
 
 COPY --chown=node:node entrypoint.sh setup-claude-config.py /home/node/
 RUN chmod +x /home/node/entrypoint.sh

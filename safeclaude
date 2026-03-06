@@ -16,7 +16,7 @@
 #   2. .safeclaude-mount file           # in any parent dir, contains mount path
 #   3. Git repo / worktree root          # just the current repo or worktree
 #
-# Auth: Claude prompts interactively on first run; credentials persist inside the container.
+# Auth: Claude prompts interactively on first run; credentials persist across containers.
 
 set -e
 
